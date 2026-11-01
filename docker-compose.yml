@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: evolution
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
+  evolution:
+    image: evoapicloud/evolution-api:v2.3.7
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    env_file:
+      - .env
+    environment:
+      AUTHENTICATION_API_KEY: ${AUTHENTICATION_API_KEY:?Set AUTHENTICATION_API_KEY in .env}
+      SERVER_URL: http://localhost:8080
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://evolution:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/evolution
+      DATABASE_CONNECTION_CLIENT_NAME: evolution_local
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://redis:6379/1
+      CACHE_LOCAL_ENABLED: "false"
+    volumes:
+      - evolution_instances:/evolution/instances
+    depends_on:
+      - postgres
+      - redis
+
+volumes:
+  postgres_data:
+  redis_data:
+  evolution_instances:
+
